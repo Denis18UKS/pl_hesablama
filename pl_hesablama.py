@@ -65,6 +65,9 @@ class OrderApp(QMainWindow):
         # Блок управления Excel и AutoCAD
         self.create_excel_and_cad_controls()
 
+        # Список путей к изображениям
+        self.image_paths = []
+
     def create_order_info_section(self):
         """Создание секции с основной информацией."""
         grid = QGridLayout()
@@ -98,24 +101,24 @@ class OrderApp(QMainWindow):
         self.phone_input.textChanged.connect(self.validate_phone)
         grid.addWidget(self.phone_input, 2, 1)
 
-        grid.addWidget(QLabel("Дата начала:"), 2, 2)
+        grid.addWidget(QLabel("Дата начала:"), 3, 0)
         self.start_date = QDateEdit()
         self.start_date.setCalendarPopup(True)
         self.start_date.setDate(QDate.currentDate())
-        grid.addWidget(self.start_date, 2, 3)
+        grid.addWidget(self.start_date, 3, 1)
 
-        grid.addWidget(QLabel("Дата окончания:"), 3, 0)
+        grid.addWidget(QLabel("Дата окончания:"), 3, 2)
         self.end_date = QDateEdit()
         self.end_date.setCalendarPopup(True)
         self.end_date.setDate(QDate.currentDate())
-        grid.addWidget(self.end_date, 3, 1)
+        grid.addWidget(self.end_date, 3, 3)
 
-        grid.addWidget(QLabel("Адрес:"), 3, 2)
+        grid.addWidget(QLabel("Адрес:"), 4, 0)
         self.address_input = QLineEdit()
-        grid.addWidget(self.address_input, 3, 3)
+        grid.addWidget(self.address_input, 4, 1)
 
         self.main_layout.addLayout(grid)
-    
+
     def validate_phone(self):
         """Проверка валидности телефона."""
         phone_text = self.phone_input.text()
@@ -125,17 +128,13 @@ class OrderApp(QMainWindow):
         else:
             self.phone_input.setStyleSheet("border: 1px solid red;")  # Красная рамка для невалидного номера
 
-            
     def create_product_table(self):
         """Создание таблицы для ввода информации о продуктах."""
-        # Создаем основной горизонтальный макет для таблицы и кнопок
         table_layout = QHBoxLayout()
 
         # Таблица продуктов
         self.table = QTableWidget(0, 6)  # Столбцы: Название, Ед. изм., Кол-во, Цена, Сумма, Примечание
-        self.table.setHorizontalHeaderLabels([
-            "Название продукта", "Ед. изм.", "Кол-во", "Цена", "Сумма", "Примечание"
-        ])
+        self.table.setHorizontalHeaderLabels(["Название продукта", "Ед. изм.", "Кол-во", "Цена", "Сумма", "Примечание"])
         self.table.horizontalHeader().setStretchLastSection(True)
         table_layout.addWidget(self.table)
 
@@ -144,10 +143,7 @@ class OrderApp(QMainWindow):
         self.table.setItemDelegateForColumn(2, numeric_delegate)  # "Кол-во"
         self.table.setItemDelegateForColumn(3, numeric_delegate)  # "Цена"
         self.table.setItemDelegateForColumn(4, NumericDelegate(self))
-        for row in range(self.table.rowCount()):
-            item = self.table.item(row, 4) or QTableWidgetItem("0.00")
-            item.setFlags(item.flags() & ~Qt.ItemIsEditable)  # Запрет редактирования
-            self.table.setItem(row, 4, item)
+
         # Боковая панель для кнопок
         button_layout = QVBoxLayout()
 
@@ -174,7 +170,6 @@ class OrderApp(QMainWindow):
         # Добавляем макет в общий макет
         self.main_layout.addLayout(table_layout)
 
-
     def create_image_section(self):
         """Создание секции для загрузки и отображения изображений."""
         self.image_layout = QVBoxLayout()
@@ -194,7 +189,6 @@ class OrderApp(QMainWindow):
 
         self.image_layout.addWidget(self.image_display)
         self.main_layout.addLayout(self.image_layout)
-
 
     def create_summary_and_controls(self):
         """Создание блока итогов и кнопок управления."""
@@ -279,8 +273,6 @@ class OrderApp(QMainWindow):
         except Exception as e:
             print(f"Ошибка при загрузке Excel: {e}")
 
-    from openpyxl.styles import Alignment, Font, Border, Side
-
     def save_to_excel(self):
         """Сохранение данных формы в Excel с обработкой дублирования серийного номера."""
         file_path, _ = QFileDialog.getSaveFileName(self, "Сохранить в Excel", "", "Excel Files (*.xlsx)")
@@ -338,9 +330,6 @@ class OrderApp(QMainWindow):
         except Exception as e:
             print(f"Ошибка сохранения в Excel: {e}")
 
-
-
-
     def open_cad_file(self):
         """Открытие файла AutoCAD."""
         file_path, _ = QFileDialog.getOpenFileName(self, "Выберите файл AutoCAD", "", "DWG Files (*.dwg)")
@@ -362,7 +351,6 @@ class OrderApp(QMainWindow):
         current_row = self.table.currentRow()
         if current_row >= 0:
             self.table.removeRow(current_row)
-
 
     def upload_image(self):
         """Загрузка изображения."""
@@ -450,17 +438,13 @@ class OrderApp(QMainWindow):
         # Обновляем итоговый лейбл
         self.total_label.setText(f"Итог: {total_with_commission:.2f} AZN")
 
-
-
     def send_order(self):
         """Обработчик кнопки 'Отправить заказ'. Сохраняет данные в 'database.xlsx'."""
-        # Проверяем существование файла и загружаем его
         database_file = "database.xlsx"
         if os.path.exists(database_file):
             workbook = openpyxl.load_workbook(database_file)
             sheet = workbook.active
         else:
-            # Если файла нет, создаем новый
             workbook = openpyxl.Workbook()
             sheet = workbook.active
             # Устанавливаем заголовки для нового файла
@@ -512,20 +496,19 @@ class OrderApp(QMainWindow):
         workbook.save(database_file)
         print("Данные успешно отправлены в базу.")
 
-
-
     def clear_form(self):
         """Очистить форму."""
         self.company_input.clear()
         self.responsible_input.clear()
         self.phone_input.clear()
         self.address_input.clear()
+        self.start_date.setDate(QDate.currentDate())
+        self.end_date.setDate(QDate.currentDate())
         self.table.setRowCount(0)
         self.total_label.setText("Итог: 0 AZN")
         for i in reversed(range(self.image_display_layout.count())):
             widget = self.image_display_layout.itemAt(i).widget()
             widget.deleteLater()
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
