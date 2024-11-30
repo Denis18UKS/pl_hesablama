@@ -453,8 +453,66 @@ class OrderApp(QMainWindow):
 
 
     def send_order(self):
-        """Обработчик кнопки 'Отправить заказ'."""
-        print("Заказ отправлен!")
+        """Обработчик кнопки 'Отправить заказ'. Сохраняет данные в 'database.xlsx'."""
+        # Проверяем существование файла и загружаем его
+        database_file = "database.xlsx"
+        if os.path.exists(database_file):
+            workbook = openpyxl.load_workbook(database_file)
+            sheet = workbook.active
+        else:
+            # Если файла нет, создаем новый
+            workbook = openpyxl.Workbook()
+            sheet = workbook.active
+            # Устанавливаем заголовки для нового файла
+            headers = [
+                "Serial", "Фирма", "Ответственное лицо", "Телефон", "Дата начала",
+                "Дата окончания", "Адрес", "Название продукта", "Ед. изм.", "Кол-во",
+                "Цена", "Сумма", "Примечание"
+            ]
+            for col_num, header in enumerate(headers, start=1):
+                cell = sheet.cell(row=1, column=col_num, value=header)
+                cell.font = Font(bold=True, color="FFFFFF")
+                cell.fill = openpyxl.styles.PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        # Найти следующую свободную строку
+        next_row = sheet.max_row + 1
+
+        # Генерация уникального серийного номера
+        base_serial = self.serial_number_input.text() or "1111"
+        serial_tracker = {}  # Отслеживает использование серийных номеров
+
+        # Добавление данных в файл
+        for row_idx in range(self.table.rowCount()):
+            # Проверяем наличие дубликатов для текущего серийного номера
+            serial = base_serial
+            if serial in serial_tracker:
+                serial_tracker[serial] += 1
+                serial = f"{serial}-{serial_tracker[serial]}"
+            else:
+                serial_tracker[serial] = 0
+
+            # Заполнение строки данными
+            base_row = next_row + row_idx
+            sheet.cell(row=base_row, column=1, value=serial)  # Уникальный серийный номер
+            sheet.cell(row=base_row, column=2, value=self.company_input.currentText())
+            sheet.cell(row=base_row, column=3, value=self.responsible_input.text())
+            sheet.cell(row=base_row, column=4, value=self.phone_input.text())
+            sheet.cell(row=base_row, column=5, value=self.start_date.text())
+            sheet.cell(row=base_row, column=6, value=self.end_date.text())
+            sheet.cell(row=base_row, column=7, value=self.address_input.text())
+
+            # Заполнение данных таблицы продуктов
+            for col_idx in range(self.table.columnCount()):
+                item = self.table.item(row_idx, col_idx)
+                value = item.text() if item else ""
+                sheet.cell(row=base_row, column=col_idx + 8, value=value)
+
+        # Сохраняем изменения
+        workbook.save(database_file)
+        print("Данные успешно отправлены в базу.")
+
+
 
     def clear_form(self):
         """Очистить форму."""
