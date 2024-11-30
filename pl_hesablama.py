@@ -69,6 +69,15 @@ class OrderApp(QMainWindow):
         # Список путей к изображениям
         self.image_paths = []
 
+    def show_message(self, title, message, icon=QMessageBox.Information):
+        """Уведомление для пользователя."""
+        msg_box = QMessageBox(self)
+        msg_box.setIcon(icon)
+        msg_box.setWindowTitle(title)
+        msg_box.setText(message)
+        msg_box.exec_()
+
+
     def create_order_info_section(self):
         """Создание секции с основной информацией."""
         grid = QGridLayout()
@@ -256,7 +265,7 @@ class OrderApp(QMainWindow):
             self.start_date.setDate(QDate.fromString(sheet["E2"].value, "yyyy-MM-dd") if sheet["E2"].value else QDate.currentDate())  # Дата начала
             self.end_date.setDate(QDate.fromString(sheet["F2"].value, "yyyy-MM-dd") if sheet["F2"].value else QDate.currentDate())    # Дата окончания
             self.address_input.setText(sheet["G2"].value or "")                  # Адрес
-
+            self.show_message("Успех", "Данные успешно загружены из Excel!")
             # Очистка таблицы перед загрузкой
             self.table.setRowCount(0)
 
@@ -327,7 +336,7 @@ class OrderApp(QMainWindow):
 
             workbook.save(file_path)
             print("Данные успешно сохранены.")
-
+            self.show_message("Успех", "Данные успешно сохранены в Excel!")
         except Exception as e:
             print(f"Ошибка сохранения в Excel: {e}")
 
@@ -394,7 +403,8 @@ class OrderApp(QMainWindow):
 
             # Добавляем контейнер в горизонтальный лэйаут
             self.image_display_layout.addWidget(container)
-
+            self.show_message("Успех", "Изображение успешно загружено!")
+            
     def remove_image(self, container, file_path):
         """Удаление изображения из виджета и файла."""
         # Удаляем виджет
@@ -496,39 +506,28 @@ class OrderApp(QMainWindow):
         # Сохраняем изменения
         workbook.save(database_file)
         print("Данные успешно отправлены в базу.")
-
+        self.show_message("Успех", "Заказ успешно добавлен в базу данных!")
     def clear_form(self):
-        """Сброс всех полей формы и таблицы."""
-        # Сбрасываем основные поля
-        self.company_input.setCurrentIndex(0)
-        self.responsible_input.clear()
-        self.phone_input.clear()
-        self.phone_input.setStyleSheet("")  # Убираем цвет рамки
-        self.start_date.setDate(QDate.currentDate())
-        self.end_date.setDate(QDate.currentDate())
-        self.address_input.clear()
+        reply = QMessageBox.question(
+            self,
+            "Подтверждение",
+            "Вы уверены, что хотите очистить форму?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        if reply == QMessageBox.Yes:
+            # Код очистки формы
+            self.table.setRowCount(0)
+            self.serial_number_input.clear()
+            self.company_input.setCurrentIndex(0)
+            self.responsible_input.clear()
+            self.phone_input.clear()
+            self.address_input.clear()
+            self.start_date.setDate(QDate.currentDate())
+            self.end_date.setDate(QDate.currentDate())
+            self.image_display_layout = QHBoxLayout()
+            self.show_message("Успех", "Форма успешно очищена!")
 
-        # Очищаем таблицу
-        self.table.setRowCount(0)
-
-        # Сбрасываем итоговую сумму
-        self.total_label.setText("Итог: 0 AZN")
-        self.commission_input.setValue(15)
-
-        # Удаляем все изображения из интерфейса и папки
-        while self.image_display_layout.count():
-            item = self.image_display_layout.takeAt(0)
-            widget = item.widget()
-            if widget:
-                widget.deleteLater()
-
-        # Удаляем файлы изображений из папки
-        for file_name in os.listdir(IMAGES_FOLDER):
-            file_path = os.path.join(IMAGES_FOLDER, file_name)
-            if os.path.isfile(file_path):
-                os.remove(file_path)
-
-        print("Форма успешно очищена.")
 
 
 if __name__ == "__main__":
