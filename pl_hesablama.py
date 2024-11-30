@@ -17,6 +17,7 @@ from PyQt5.QtWidgets import QStyledItemDelegate, QLineEdit
 from PyQt5.QtGui import QRegularExpressionValidator
 from PyQt5.QtCore import QRegularExpression
 import re
+from PyQt5.QtWidgets import QMessageBox
 
 # Глобальные константы
 IMAGES_FOLDER = "images/"
@@ -213,7 +214,7 @@ class OrderApp(QMainWindow):
 
         self.clear_button = QPushButton("Очистить форму")
         self.clear_button.clicked.connect(self.clear_form)
-        summary_layout.addLayout(summary_layout)
+        summary_layout.addWidget(self.clear_button)  # Исправлено: кнопка должна добавляться в layout
 
         self.main_layout.addLayout(summary_layout)
 
@@ -497,18 +498,38 @@ class OrderApp(QMainWindow):
         print("Данные успешно отправлены в базу.")
 
     def clear_form(self):
-        """Очистить форму."""
-        self.company_input.clear()
+        """Сброс всех полей формы и таблицы."""
+        # Сбрасываем основные поля
+        self.company_input.setCurrentIndex(0)
         self.responsible_input.clear()
         self.phone_input.clear()
-        self.address_input.clear()
+        self.phone_input.setStyleSheet("")  # Убираем цвет рамки
         self.start_date.setDate(QDate.currentDate())
         self.end_date.setDate(QDate.currentDate())
+        self.address_input.clear()
+
+        # Очищаем таблицу
         self.table.setRowCount(0)
+
+        # Сбрасываем итоговую сумму
         self.total_label.setText("Итог: 0 AZN")
-        for i in reversed(range(self.image_display_layout.count())):
-            widget = self.image_display_layout.itemAt(i).widget()
-            widget.deleteLater()
+        self.commission_input.setValue(15)
+
+        # Удаляем все изображения из интерфейса и папки
+        while self.image_display_layout.count():
+            item = self.image_display_layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+
+        # Удаляем файлы изображений из папки
+        for file_name in os.listdir(IMAGES_FOLDER):
+            file_path = os.path.join(IMAGES_FOLDER, file_name)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+
+        print("Форма успешно очищена.")
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
