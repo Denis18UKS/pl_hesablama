@@ -207,7 +207,7 @@ class OrderApp(QMainWindow):
         summary_layout.addWidget(self.commission_input)
 
         # Кнопки
-        self.send_button = QPushButton("Отправить заказ")
+        self.send_button = QPushButton("Отправить в базу")
         self.send_button.clicked.connect(self.send_order)
         summary_layout.addWidget(self.send_button)
 
@@ -439,7 +439,7 @@ class OrderApp(QMainWindow):
         self.total_label.setText(f"Итог: {total_with_commission:.2f} AZN")
 
     def send_order(self):
-        """Обработчик кнопки 'Отправить заказ'. Сохраняет данные в 'database.xlsx'."""
+        """Обработчик кнопки 'Отправить в базу'. Сохраняет данные в 'database.xlsx'."""
         database_file = "database.xlsx"
         if os.path.exists(database_file):
             workbook = openpyxl.load_workbook(database_file)
