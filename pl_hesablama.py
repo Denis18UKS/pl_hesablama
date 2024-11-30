@@ -14,7 +14,9 @@ from PyQt5.QtGui import QIcon
 from openpyxl.styles import Alignment, Font, Border, Side
 from PyQt5.QtGui import QDoubleValidator
 from PyQt5.QtWidgets import QStyledItemDelegate, QLineEdit
-
+from PyQt5.QtGui import QRegularExpressionValidator
+from PyQt5.QtCore import QRegularExpression
+import re
 
 # Глобальные константы
 IMAGES_FOLDER = "images/"
@@ -67,7 +69,7 @@ class OrderApp(QMainWindow):
         """Создание секции с основной информацией."""
         grid = QGridLayout()
 
-        # Поле для серийного номера (в левом верхнем углу)
+        # Поле для серийного номера
         self.serial_number_input = QLineEdit()
         self.serial_number_input.setPlaceholderText("1111")  # Примерный начальный серийный номер
         self.serial_number_input.setFixedWidth(100)
@@ -82,8 +84,18 @@ class OrderApp(QMainWindow):
         self.responsible_input = QLineEdit()
         grid.addWidget(self.responsible_input, 1, 3)
 
+        # Поле для телефона с валидатором
         grid.addWidget(QLabel("Телефон:"), 2, 0)
         self.phone_input = QLineEdit()
+        self.phone_input.setPlaceholderText("+7 (XXX) XXX-XX-XX")  # Указание формата
+        
+        # Установка регулярного выражения для формата телефона
+        phone_regex = QRegularExpression(r"^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$")
+        phone_validator = QRegularExpressionValidator(phone_regex, self.phone_input)
+        self.phone_input.setValidator(phone_validator)
+        
+        # Проверка при изменении текста
+        self.phone_input.textChanged.connect(self.validate_phone)
         grid.addWidget(self.phone_input, 2, 1)
 
         grid.addWidget(QLabel("Дата начала:"), 2, 2)
@@ -104,6 +116,16 @@ class OrderApp(QMainWindow):
 
         self.main_layout.addLayout(grid)
     
+    def validate_phone(self):
+        """Проверка валидности телефона."""
+        phone_text = self.phone_input.text()
+        pattern = r"^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$"
+        if re.match(pattern, phone_text):
+            self.phone_input.setStyleSheet("border: 1px solid green;")  # Зеленая рамка для валидного номера
+        else:
+            self.phone_input.setStyleSheet("border: 1px solid red;")  # Красная рамка для невалидного номера
+
+            
     def create_product_table(self):
         """Создание таблицы для ввода информации о продуктах."""
         # Создаем основной горизонтальный макет для таблицы и кнопок
