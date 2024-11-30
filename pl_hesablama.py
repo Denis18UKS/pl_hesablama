@@ -245,7 +245,7 @@ class OrderApp(QMainWindow):
         self.main_layout.addLayout(layout)
 
     def load_excel_data(self):
-        """Загрузка данных из Excel в форму."""
+        """Загрузка данных из Excel с учетом представленного формата."""
         file_path, _ = QFileDialog.getOpenFileName(self, "Выберите Excel файл", "", "Excel Files (*.xlsx)")
         if not file_path:
             return
@@ -254,16 +254,27 @@ class OrderApp(QMainWindow):
             workbook = openpyxl.load_workbook(file_path)
             sheet = workbook.active
 
-            self.company_input.setCurrentText(sheet["A1"].value or "")
-            self.responsible_input.setText(sheet["A2"].value or "")
-            self.phone_input.setText(sheet["A3"].value or "")
+            # Загрузка полей общей информации из первой строки
+            self.company_input.setCurrentText(sheet["B2"].value or "Не указано")  # Фирма
+            self.responsible_input.setText(sheet["C2"].value or "")              # Ответственное лицо
+            self.phone_input.setText(sheet["D2"].value or "+7 (000) 000-00-00")  # Телефон
+            self.start_date.setDate(QDate.fromString(sheet["E2"].value, "yyyy-MM-dd") if sheet["E2"].value else QDate.currentDate())  # Дата начала
+            self.end_date.setDate(QDate.fromString(sheet["F2"].value, "yyyy-MM-dd") if sheet["F2"].value else QDate.currentDate())    # Дата окончания
+            self.address_input.setText(sheet["G2"].value or "")                  # Адрес
 
+            # Очистка таблицы перед загрузкой
             self.table.setRowCount(0)
-            for row in sheet.iter_rows(min_row=2, max_col=6, values_only=True):
-                current_row = self.table.rowCount()
-                self.table.insertRow(current_row)
-                for col, value in enumerate(row):
-                    self.table.setItem(current_row, col, QTableWidgetItem(str(value)))
+
+            # Загрузка данных для таблицы продуктов начиная с 3 строки
+            for row in sheet.iter_rows(min_row=2, max_row=sheet.max_row, min_col=8, max_col=sheet.max_column, values_only=True):
+                if any(row):  # Проверяем, есть ли данные в строке
+                    current_row = self.table.rowCount()
+                    self.table.insertRow(current_row)
+                    for col, value in enumerate(row):
+                        item = QTableWidgetItem(str(value) if value is not None else "")
+                        self.table.setItem(current_row, col, item)
+
+            print("Данные успешно загружены из Excel!")
 
         except Exception as e:
             print(f"Ошибка при загрузке Excel: {e}")
@@ -271,7 +282,7 @@ class OrderApp(QMainWindow):
     from openpyxl.styles import Alignment, Font, Border, Side
 
     def save_to_excel(self):
-        """Сохранение данных формы в Excel с форматированием."""
+        """Сохранение данных формы в Excel с обработкой дублирования серийного номера."""
         file_path, _ = QFileDialog.getSaveFileName(self, "Сохранить в Excel", "", "Excel Files (*.xlsx)")
         if not file_path:
             return
@@ -280,76 +291,53 @@ class OrderApp(QMainWindow):
             workbook = openpyxl.Workbook()
             sheet = workbook.active
 
-            # Установка названий колонок
+            # Заголовки столбцов
             headers = [
                 "Serial", "Фирма", "Ответственное лицо", "Телефон", "Дата начала",
                 "Дата окончания", "Адрес", "Название продукта", "Ед. изм.", "Кол-во",
                 "Цена", "Сумма", "Примечание"
             ]
-
-
             for col_num, header in enumerate(headers, start=1):
                 cell = sheet.cell(row=1, column=col_num, value=header)
-                # Форматирование заголовков
                 cell.font = Font(bold=True, color="FFFFFF")
                 cell.fill = openpyxl.styles.PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
                 cell.alignment = Alignment(horizontal="center", vertical="center")
 
-            # Запись основной информации
-            serial = self.serial_number_input.text() or "1111"  # Значение по умолчанию
-            sheet.cell(row=2, column=1, value=serial)
-            sheet.cell(row=2, column=2, value=self.company_input.currentText())
-            sheet.cell(row=2, column=3, value=self.responsible_input.text())
-            sheet.cell(row=2, column=4, value=self.phone_input.text())
-            sheet.cell(row=2, column=5, value=self.start_date.text())
-            sheet.cell(row=2, column=6, value=self.end_date.text())
-            sheet.cell(row=2, column=7, value=self.address_input.text())
+            # Словарь для отслеживания дубликатов
+            serial_tracker = {}
+            base_serial = self.serial_number_input.text() or "1111"
 
-            # Добавление формата для ячеек основной информации
-            for row in range(2, 3):  # Строка основной информации
-                for col in range(1, 8):  # Колонки от 1 до 7
-                    cell = sheet.cell(row=row, column=col)
-                    cell.alignment = Alignment(horizontal="center", vertical="center")
-                    cell.border = Border(
-                        left=Side(style="thin"), right=Side(style="thin"),
-                        top=Side(style="thin"), bottom=Side(style="thin")
-                    )
+            # Заполнение строк
+            for row_idx in range(self.table.rowCount()):
+                # Проверяем наличие дубликата
+                serial = base_serial
+                if serial in serial_tracker:
+                    serial_tracker[serial] += 1
+                    serial = f"{serial}-{serial_tracker[serial]}"
+                else:
+                    serial_tracker[serial] = 0
 
-            # Проверка на дублирование серийного номера
-            serial_duplicate_count = 1
-            for row in range(self.table.rowCount()):
-                current_serial = serial
-                if row > 0:  # Добавляем суффикс для последующих строк
-                    current_serial += f"-{serial_duplicate_count}"
-                    serial_duplicate_count += 1
+                # Заполнение строки данными
+                base_row = row_idx + 2  # Начинаем со второй строки
+                sheet.cell(row=base_row, column=1, value=serial)
+                sheet.cell(row=base_row, column=2, value=self.company_input.currentText())
+                sheet.cell(row=base_row, column=3, value=self.responsible_input.text())
+                sheet.cell(row=base_row, column=4, value=self.phone_input.text())
+                sheet.cell(row=base_row, column=5, value=self.start_date.text())
+                sheet.cell(row=base_row, column=6, value=self.end_date.text())
+                sheet.cell(row=base_row, column=7, value=self.address_input.text())
 
-                base_row = row + 3  # Начиная с третьей строки
-                sheet.cell(row=base_row, column=1, value=serial)  # Serial
-                sheet.cell(row=base_row, column=2, value=self.company_input.currentText())  # Фирма
-                sheet.cell(row=base_row, column=3, value=self.responsible_input.text())  # Ответственное лицо
-                sheet.cell(row=base_row, column=4, value=self.phone_input.text())  # Телефон
-                sheet.cell(row=base_row, column=5, value=self.start_date.text())  # Дата начала
-                sheet.cell(row=base_row, column=6, value=self.end_date.text())  # Дата окончания
-                sheet.cell(row=base_row, column=7, value=self.address_input.text())  # Адрес
                 for col_idx in range(self.table.columnCount()):
-                    item = self.table.item(row, col_idx)
+                    item = self.table.item(row_idx, col_idx)
                     value = item.text() if item else ""
-                    sheet.cell(row=base_row, column=col_idx + 8, value=value)  # Продуктовые данные
-
-                # Форматирование строк данных
-                for col in range(1, 8):
-                    cell = sheet.cell(row=base_row, column=col)
-                    cell.alignment = Alignment(horizontal="center", vertical="center")
-                    cell.border = Border(
-                        left=Side(style="thin"), right=Side(style="thin"),
-                        top=Side(style="thin"), bottom=Side(style="thin")
-                    )
+                    sheet.cell(row=base_row, column=col_idx + 8, value=value)
 
             workbook.save(file_path)
             print("Данные успешно сохранены.")
 
         except Exception as e:
             print(f"Ошибка сохранения в Excel: {e}")
+
 
 
 
