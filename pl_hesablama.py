@@ -18,7 +18,6 @@ from PyQt5.QtGui import QRegularExpressionValidator
 from PyQt5.QtCore import QRegularExpression
 import re
 from PyQt5.QtWidgets import QMessageBox
-
 # Глобальные константы
 IMAGES_FOLDER = "images/"
 
