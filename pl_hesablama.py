@@ -346,10 +346,16 @@ class OrderApp(QMainWindow):
         if not file_path:
             return
 
+        if not os.path.exists(file_path):
+            self.show_message("Ошибка", "Выбранный файл не существует.")
+            return
+
         try:
-            subprocess.Popen(file_path, shell=True)
+            # Открываем файл с помощью AutoCAD
+            subprocess.Popen([r"C:\Program Files\Autodesk\AutoCAD 2023\acad.exe", file_path], shell=True)
         except Exception as e:
             print(f"Ошибка при открытии AutoCAD файла: {e}")
+            self.show_message("Ошибка", "Не удалось открыть файл AutoCAD: " + str(e))
 
     def add_row(self):
         """Добавить строку в таблицу."""
